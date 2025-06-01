@@ -28,6 +28,7 @@ frontal_area = 1.5
 drag_coeff = 0.42
 mass = 190
 df = pd.read_csv('125_power_curve.csv')
+ff = pd.read_csv('driving_log.csv')
 hp = 0
 torque = 0
 rpm = 0
@@ -39,45 +40,70 @@ time_step = 0.1  # seconds
 distance = 0.0  # Initialize distance
 time = 0.0
 corrected_torque = 0.0
+throttle = 0.0
+corrected_power = 0
+throttle_torque = 0
+has_ended = False
 
+def get_has_ended_from_csv():
+    global has_ended, time
+    global ff
+    has_ended = ff.loc[ff['time'] == time, 'has_ended']
+    if not has_ended.empty:
+        has_ended = has_ended.values[0]
+        print(f"Has ended: {has_ended}")
+    else:
+        print("No end status found for the current time.")
+        has_ended = 0  # Default to False if no value found
 
-
-def rpm_round(rpm):
-    global df
+def get_throttle_from_csv(): #get throttle value from driving_log.csv corresponding to the current time
+    global throttle, time
+    global ff
+    throttle = ff.loc[ff['time'] == time, 'throttle']
+    if not throttle.empty:
+        throttle = throttle.values[0] * 100
+        print(f"Throttle: {throttle}")
+    else:
+        print("No throttle value found for the current time.")
+        throttle = 0  # Default to 0 if no value found
+    
+def rpm_round():
+    global df, rpm
     closest_rpm = df['rpm'].iloc[(df['rpm'] - rpm).abs().argsort()[:1]]
     if not closest_rpm.empty:
-        return closest_rpm.values[0]
+        rpm = closest_rpm.values[0]
     else:
         print("No RPM values found.")
         return None
 
-def get_hp(rpm):
-    global df
+def get_hp():
+    global df, rpm
+    global hp
     hp = df.loc[df['rpm'] == rpm, 'hp']
     if not hp.empty:
         print(f"HP: {hp.values[0]}")
-        return hp.values[0]
+        hp =  int(hp.values[0]) + 1
     else:
         print("RPM value not found.")
-        return None
+        hp = 0  # Default to 0 if no value found
     
-def get_torque(rpm):
-    global df
+def get_torque():
+    global df, rpm
     torque = df.loc[df['rpm'] == rpm, 'torque']
     if not torque.empty:
         print(f"Torque: {torque.values[0]}")
-        return torque.values[0]
+        torque =  int(torque.values[0])
     else:
         print("RPM value not found.")
-        return None
+        torque = 0  # Default to 0 if no value found
 
 
-def idle_check(rpm):
-    global on_idle
-    if rpm < idle_rpm:
+def idle_check():
+    global on_idle, throttle
+    if throttle == 0:
         on_idle = True
     else:
-        on_idle = False
+        on_idle = False    
 
 def begin_check(on_idle):
     global has_started
@@ -132,7 +158,7 @@ def deceleration_calculation():
     neg_acceleration = -tire_coeff * g - drag_accel
 
 def torque_gear_ratio_calculation(gear):
-    global torque, corrected_torque, prim_red, sec_red, diff_red
+    global torque, corrected_torque, prim_red, sec_red, diff_red,throttle_torque, throttle
     global gear_1, gear_2, gear_3, gear_4, gear_5
     if gear == 1:
         gear_ratio = gear_1
@@ -147,7 +173,8 @@ def torque_gear_ratio_calculation(gear):
     else:
         print("Invalid gear selected.")
         return
-    corrected_torque = torque * prim_red * sec_red * gear_ratio * diff_red
+    throttle_torque = torque * prim_red * sec_red * gear_ratio * diff_red
+    corrected_torque = throttle_torque * (throttle / 100)  # Adjust torque based on throttle percentage
 
 
 def acceleration_calculation():
@@ -211,58 +238,74 @@ def gear_change(gear):
 
 
 def main():
-    global hp, torque, distance, time, idle_rpm, accel
+    global hp, torque, distance, time, idle_rpm, accel, gear
     global rpm, init_speed_ms, final_speed_ms, has_started, on_idle
-    rpm = int(input("Enter RPM: "))
-    gear = int(input("Enter Gear (1-5): "))
-    target_time = float(input("Enter time of accel in seconds: "))
-    hp = int(get_hp(rpm)) + 1
-    torque = int(get_torque(rpm))
-    idle_check(rpm)
+    rpm_round()
+    get_hp()
+    get_torque()
+    get_throttle_from_csv()
+    idle_check()
     begin_check(on_idle)
     init_speed_ms = final_speed_ms 
-    if has_started == True:
-        if on_idle == False:
-            while time < target_time:
-                rpm_round(rpm)
-                speed_calc(rpm, gear)
-                drag_effect()
-                torque_gear_ratio_calculation(gear)
-                deceleration_calculation()
-                acceleration_calculation()
-                accel_total()
-                speed_update()
-                rpm = final_speed_to_rpm(gear)
-                gear = gear_change(gear)
-                new_distance = distance_per_time()
-                distance = distance + new_distance
-                time += time_step
-                print("RPM:", rpm)
-            rpm = idle_rpm
-            on_idle = True
-        if on_idle == True:
-            while final_speed_ms > 0:
-                accel = 0
-                init_speed_ms = final_speed_ms
-                rpm_round(rpm)
-                drag_effect()
-                deceleration_calculation()
-                accel_total()
-                speed_update()
-                gear = gear_change(gear)
-                new_distance = distance_per_time()
-                distance = distance + new_distance
-                time += time_step
-                print("RPM:", rpm, "time:", time)
-                print(f"Distance traveled: {distance:.2f} meters")
+    if on_idle == False:
+        speed_calc(rpm, gear)
+        drag_effect()
+        torque_gear_ratio_calculation(gear)
+        deceleration_calculation()
+        acceleration_calculation()
+        accel_total()
+        speed_update()
+        rpm = final_speed_to_rpm(gear)
+        gear = gear_change(gear)
+        rpm_round()
+        new_distance = distance_per_time()
+        distance = distance + new_distance
+        print("RPM:", rpm)
+        
+            
+
+            
+    if on_idle == True:
+        accel = 0
+        init_speed_ms = final_speed_ms
+        rpm_round()
+        drag_effect()
+        deceleration_calculation()
+        accel_total()
+        speed_update()
+        gear = gear_change(gear)
+        rpm_round()
+        new_distance = distance_per_time()
+        distance = distance + new_distance
+        print("RPM:", rpm, "time:", time)
+        print(f"Distance traveled: {distance:.2f} meters")
+       
 
 
     print(f"Distance traveled: {distance:.2f} meters")
+    time += time_step
+    time_round() 
+    print("time:", time) # Increment time by the time step
     #    speed_calc(rpm)
     #    drag_effect()
     #    friction_calculation()
 
+
+
+def time_round():
+    global time
+    time = round(time, 1)  # Round time to 1 decimal place  
+
+rpm = int(input("Enter RPM: "))
+gear = int(input("Enter Gear (1-5): "))
 main()
 
-# This code calculates the distance required to stop a vehicle given its speed and the friction coefficient of the tires.
+while has_ended == 0:
+    time_round()
+    get_has_ended_from_csv()
+    if has_ended == 0:
+        main()
+    else:
+        print("Simulation has ended.")
+        break
 # RESULTS STILL REQUIRE FURTHER TESTING AND VALIDATION
