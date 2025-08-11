@@ -54,9 +54,9 @@ def get_has_ended_from_csv():
         print(f"Has ended: {has_ended}")
     else:
         print("No end status found for the current time.")
-        has_ended = 0  # Default to False if no value found
+        has_ended = 0  
 
-def get_throttle_from_csv(): #get throttle value from driving_log.csv corresponding to the current time
+def get_throttle_from_csv():
     global throttle, time
     global ff
     throttle = ff.loc[ff['time'] == time, 'throttle']
@@ -65,7 +65,7 @@ def get_throttle_from_csv(): #get throttle value from driving_log.csv correspond
         print(f"Throttle: {throttle}")
     else:
         print("No throttle value found for the current time.")
-        throttle = 0  # Default to 0 if no value found
+        throttle = 0  
     
 def rpm_round():
     global df, rpm
