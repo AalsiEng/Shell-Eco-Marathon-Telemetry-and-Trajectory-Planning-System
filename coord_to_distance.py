@@ -39,7 +39,7 @@ def total_distance(coords):
     return distance
 
 if __name__ == "__main__":
-    coords = read_coords('Lusail_Coords.csv')
+    coords = read_coords('eme_straight.csv')
     dist = total_distance(coords)
     bearing = calculate_bearing(coords[0][0], coords[0][1], coords[1][0], coords[1][1])
     print(f"Initial bearing from first to second coordinate: {bearing:.2f} degrees")
