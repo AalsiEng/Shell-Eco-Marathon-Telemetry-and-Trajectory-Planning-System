@@ -6,7 +6,7 @@ import pandas as pd
 import csv
 from math import radians, sin, cos, sqrt, atan2
 
-tire_coeff = 0.02 #assumed value for friciton coeffecient of tire rubber
+tire_coeff = 0.009 #assumed value for friciton coeffecient of tire rubber
 g = 9.81
 prim_red = 4.055
 sec_red = 2.857
@@ -214,16 +214,19 @@ def torque_gear_ratio_calculation(gear):
         return
     throttle_torque = torque * prim_red * sec_red * gear_ratio * diff_red
     corrected_torque = throttle_torque * (throttle / 100)  # Adjust torque based on throttle percentage
+    print(f"Corrected Torque: {corrected_torque:.2f} Nm")
 
 
 def acceleration_calculation():
     global corrected_torque, wheel_radius, mass, accel, rpm
     accel = (corrected_torque * wheel_radius) / (mass * wheel_radius**2)
+    print(f"Acceleration: {accel:.2f} m/s²")
     
 
 def accel_total():
     global accel, neg_acceleration, total_accel
     total_accel = accel + neg_acceleration
+    print(f"Total acceleration: {total_accel:.2f} m/s²")
     
 def speed_update():
     global init_speed_ms, final_speed_ms, total_accel, time_step
@@ -256,6 +259,7 @@ def final_speed_to_rpm(gear):
         return None
     combined_ratio = prim_red * sec_red * gear_ratio * diff_red
     rpm = (final_speed_ms * combined_ratio) / 0.10472  # Convert m/s to RPM
+    print("new rpm:", rpm)
     return rpm
 
 def gear_change(gear):
@@ -302,8 +306,7 @@ def main():
         rpm_round()
         new_distance = distance_per_time()
         distance = distance + new_distance
-        print("RPM:", rpm)
-        
+        print("RPM:", rpm)    
             
 
             
@@ -326,6 +329,7 @@ def main():
 
     print(f"Distance traveled: {distance:.2f} meters")
     time += time_step
+    print("time step:", time_step)
     time_round() 
     print("time:", time) # Increment time by the time step
     #    speed_calc(rpm)
