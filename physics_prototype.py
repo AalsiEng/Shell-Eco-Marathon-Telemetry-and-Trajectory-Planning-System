@@ -6,6 +6,8 @@ import pandas as pd
 import csv
 from math import radians, sin, cos, sqrt, atan2
 
+# TO BE VALIDATED AND TESTED
+drivetrain_efficiency = 0.75
 tire_coeff = 0.009 #assumed value for friciton coeffecient of tire rubber
 g = 9.81
 prim_red = 4.055
@@ -127,13 +129,12 @@ def get_hp():
         hp = 0  # Default to 0 if no value found
     
 def get_torque():
-    global df, rpm
+    global df, rpm, torque
     torque = df.loc[df['rpm'] == rpm, 'torque']
     if not torque.empty:
         print(f"Torque: {torque.values[0]}")
-        torque =  int(torque.values[0])
+        torque =  float(torque.values[0])
     else:
-        print("RPM value not found.")
         torque = 0  # Default to 0 if no value found
 
 
@@ -197,7 +198,7 @@ def deceleration_calculation():
     neg_acceleration = -tire_coeff * g - drag_accel
 
 def torque_gear_ratio_calculation(gear):
-    global torque, corrected_torque, prim_red, sec_red, diff_red,throttle_torque, throttle
+    global torque, corrected_torque, prim_red, sec_red, diff_red,throttle_torque, throttle, drivetrain_efficiency15
     global gear_1, gear_2, gear_3, gear_4, gear_5
     if gear == 1:
         gear_ratio = gear_1
@@ -212,9 +213,11 @@ def torque_gear_ratio_calculation(gear):
     else:
         print("Invalid gear selected.")
         return
-    throttle_torque = torque * prim_red * sec_red * gear_ratio * diff_red
+    throttle_torque = torque * prim_red * sec_red * gear_ratio * diff_red * drivetrain_efficiency
     corrected_torque = throttle_torque * (throttle / 100)  # Adjust torque based on throttle percentage
     print(f"Corrected Torque: {corrected_torque:.2f} Nm")
+    print(f"Throttle Torque: {throttle_torque:.2f} Nm")
+    print("torque:", torque)
 
 
 def acceleration_calculation():
