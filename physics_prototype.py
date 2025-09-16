@@ -14,10 +14,10 @@ prim_red = 4.055
 sec_red = 2.857
 diff_red = 2.714
 gear_1 = 2.769
-gear_2 = 1.722
-gear_3 = 1.272
-gear_4 = 1.041
-gear_5 = 0.884
+gear_2 = 1.88
+gear_3 = 1.45
+gear_4 = 1.174
+gear_5 = 1
 gears = [float(gear_1), float(gear_2), float(gear_3), float(gear_4), float(gear_5)]
 idle_rpm = 2500
 global on_idle
@@ -309,8 +309,7 @@ def braking_decel():
 def main():
     global hp, torque, distance_covered, time, idle_rpm, accel, gear
     global rpm, init_speed_ms, final_speed_ms, has_started, on_idle, dist
-    coords = read_coords('eme_straight.csv')
-    dist = total_distance(coords) * 1000
+    
     rpm_round()
     get_hp()
     get_torque()
@@ -371,7 +370,8 @@ def time_round():
 
 rpm = idle_rpm
 gear = 1
-
+coords = read_coords('Lusail_Coords.csv')
+dist = total_distance(coords) * 1000
 main()
 
 while has_ended == 0:
