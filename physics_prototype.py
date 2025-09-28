@@ -7,37 +7,39 @@ import csv
 from math import radians, sin, cos, sqrt, atan2, degrees
 
 # TO BE VALIDATED AND TESTED
-drivetrain_efficiency = 0.65
+drivetrain_efficiency = .65
+
 tire_coeff = 0.05 #assumed value for friciton coeffecient of tire rubber
 g = 9.81
-prim_red = 4.055
-sec_red = 2.857
-diff_red = 2.714
-gear_1 = 2.769
-gear_2 = 1.88
-gear_3 = 1.45
-gear_4 = 1.174
-gear_5 = 1
-gears = [float(gear_1), float(gear_2), float(gear_3), float(gear_4), float(gear_5)]
+prim_red = 1
+sec_red = 1
+diff_red = 2.769
+gear_1 = 36.990
+gear_2 = 20.603
+gear_3 = 13.449
+gear_4 = 9.889
+#gear_5 = 1
+gears = [float(gear_1), float(gear_2), float(gear_3), float(gear_4)]
 idle_rpm = 2500
 global on_idle
 global has_started
 on_idle = True
 has_started = False
 init_speed_ms = 0.0
-final_speed_ms = 0.0
+ideal_init_speed_ms = 0.0
+ideal_final_speed_ms = 0.0
 speed_kmh = 0.0
 drag_accel = 0.0
 drag_force = 0.0
 frontal_area = 1.298
 drag_coeff = 0.327335
 mass = 220
-df = pd.read_csv('125_power_curve.csv')
+df = pd.read_csv('70_power_curve.csv')
 ff = pd.read_csv('driving_log.csv')
 hp = 0
 torque = 0
 rpm = 0
-wheel_radius = 0.31
+wheel_radius = 0.29
 accel = 0.0
 neg_acceleration = 0.0
 total_accel = 0.0
@@ -51,7 +53,13 @@ throttle_torque = 0
 has_ended = False
 dist = 0
 rounded_rpm = 0
-
+ideal_throttle_torque = 0
+ideal_corrected_torque = 0
+KE_final = 0
+Total_KE = 0
+ideal_KE_final = 0
+ideal_Total_KE = 0
+pi = math.pi
 
 def haversine(lat1, lon1, lat2, lon2):
     # Radius of Earth in kilometers
@@ -131,7 +139,10 @@ def rpm_round():
     global df, rpm, rounded_rpm
     closest_rpm = df['rpm'].iloc[(df['rpm'] - rpm).abs().argsort()[:1]]
     if not closest_rpm.empty:
-        rounded_rpm = closest_rpm.values[0]
+        if rpm >= 2000:
+            rounded_rpm = closest_rpm.values[0]
+        else:
+            rounded_rpm = 2000
     else:
         print("No RPM values found.")
         return None
@@ -142,7 +153,7 @@ def get_hp():
     hp = df.loc[df['rpm'] == rounded_rpm, 'hp']
     if not hp.empty:
         print(f"HP: {hp.values[0]}")
-        hp =  int(hp.values[0]) * .6
+        hp =  int(hp.values[0]) 
     else:
         print("RPM value not found.")
         hp = 0  # Default to 0 if no value found
@@ -152,7 +163,7 @@ def get_torque():
     torque = df.loc[df['rpm'] == rounded_rpm, 'torque']
     if not torque.empty:
         print(f"Torque: {torque.values[0]}")
-        torque =  float(torque.values[0]) * .6
+        torque =  float(torque.values[0]) 
        
 
 
@@ -187,11 +198,10 @@ def drag_effect():
     drag_accel = drag_force / mass
     print(f"Drag Force: {drag_force:.2f} N")
     print(f"Drag Acceleration: {drag_accel:.2f} m/s²")
-    
 
 def speed_calc(rpm, gear):
     global prim_red, sec_red, diff_red, gear_1, gear_2, gear_3, gear_4, gear_5
-    global init_speed_ms, speed_kmh 
+    global init_speed_ms, speed_kmh , pi, wheel_radius
     
     if gear == 1:
         gear_ratio = gear_1
@@ -201,15 +211,18 @@ def speed_calc(rpm, gear):
         gear_ratio = gear_3
     elif gear == 4:
         gear_ratio = gear_4
-    elif gear == 5:
-        gear_ratio = gear_5
+    #elif gear == 5:
+    #   gear_ratio = gear_5
     else:
         print("Invalid gear selected.")
         return
-    combined_ratio = prim_red * sec_red * gear_ratio * diff_red
+    combined_ratio = prim_red * gear_ratio * diff_red
+    print(combined_ratio)
     # Calculate speed in m/s
-    init_speed_ms = (rpm * 0.10472) / combined_ratio  # Convert RPM to m/s
+    init_speed_ms = ((rpm * 2 * pi * wheel_radius ) / (60 * combined_ratio))   # Convert RPM to m/s
     speed_kmh = init_speed_ms * 3.6  # Convert m/s to km/h
+    
+
 
 def deceleration_calculation():
     global tire_coeff, g, init_speed_ms, speed_kmh
@@ -217,8 +230,8 @@ def deceleration_calculation():
     neg_acceleration = -( tire_coeff * g) - drag_accel
 
 def torque_gear_ratio_calculation(gear):
-    global torque, corrected_torque, prim_red, sec_red, diff_red,throttle_torque, throttle, drivetrain_efficiency15
-    global gear_1, gear_2, gear_3, gear_4, gear_5
+    global torque, corrected_torque, prim_red, sec_red, diff_red,throttle_torque, throttle, drivetrain_efficiency
+    global gear_1, gear_2, gear_3, gear_4
     if gear == 1:
         gear_ratio = gear_1
     elif gear == 2:
@@ -226,9 +239,9 @@ def torque_gear_ratio_calculation(gear):
     elif gear == 3:
         gear_ratio = gear_3
     elif gear == 4:
-        gear_ratio = gear_4
-    elif gear == 5:
-        gear_ratio = gear_5
+       gear_ratio = gear_4
+    #elif gear == 5:
+     #   gear_ratio = gear_5
     else:
         print("Invalid gear selected.")
         return
@@ -239,10 +252,12 @@ def torque_gear_ratio_calculation(gear):
     print("torque:", torque)
 
 
+
 def acceleration_calculation():
     global corrected_torque, wheel_radius, mass, accel, rpm
     accel = (corrected_torque * wheel_radius) / (mass * wheel_radius**2)
     print(f"Acceleration: {accel:.2f} m/s²")
+
     
 
 def accel_total():
@@ -253,10 +268,19 @@ def accel_total():
 def speed_update():
     global init_speed_ms, final_speed_ms, total_accel, time_step
     final_speed_ms = init_speed_ms + (total_accel / 10)
+    print("init speed:", init_speed_ms)
     print(f"Final speed in km/h: {final_speed_ms * 3.6:.2f}")
     if final_speed_ms < 0:
         final_speed_ms = 0
-        
+
+def Kinetic_Energy():
+    global mass, init_speed_ms, final_speed_ms, KE_final, Total_KE, throttle
+    KE_final = 0.5 * mass * (final_speed_ms ** 2)
+    
+    Total_KE = KE_final
+    print("KE final:", KE_final)
+    print("Total KE:", Total_KE)
+
 
 def distance_per_time():
     global init_speed_ms, final_speed_ms, time_step
@@ -264,7 +288,7 @@ def distance_per_time():
     return distance
 
 def final_speed_to_rpm(gear):
-    global final_speed_ms, prim_red, sec_red, diff_red, gear_1, gear_2, gear_3, gear_4, gear_5
+    global final_speed_ms, prim_red, sec_red, diff_red, gear_1, gear_2, gear_3, gear_4, pi, wheel_radius
     
     if gear == 1:
         gear_ratio = gear_1
@@ -274,13 +298,13 @@ def final_speed_to_rpm(gear):
         gear_ratio = gear_3
     elif gear == 4:
         gear_ratio = gear_4
-    elif gear == 5:
-        gear_ratio = gear_5
+#    elif gear == 5:
+#       gear_ratio = gear_5
     else:
         print("Invalid gear selected.")
         return None
     combined_ratio = prim_red * sec_red * gear_ratio * diff_red
-    rpm = (final_speed_ms * combined_ratio) / 0.10472  # Convert m/s to RPM
+    rpm = (final_speed_ms * combined_ratio * 60) / (2 * pi * wheel_radius)  # Convert m/s to RPM
     print("new rpm:", rpm)
     return rpm
 
@@ -291,7 +315,7 @@ def gear_change(gear):
         gear -= 1
         print(f"Gear changed down to {gear}")
         return gear
-    elif rpm > 8000 and gear < 5:
+    elif rpm > 8000 and gear < 4:
         rpm = (gears[gear] * rpm) / gears[gear - 1]  # Adjust RPM based on gear ratio   
         gear += 1
         print(f"Gear changed up to {gear}")
@@ -326,6 +350,7 @@ def main():
     acceleration_calculation()
     accel_total()
     speed_update()
+    Kinetic_Energy()
     rpm = final_speed_to_rpm(gear)
     gear = gear_change(gear)
     rpm_round()
@@ -357,7 +382,10 @@ def main():
     time += time_step
     print("time step:", time_step)
     time_round() 
-    print("time:", time) # Increment time by the time step
+    print("time:", time)
+    print("Kinetic Energy:", Total_KE)
+    print("Ideal Kinetic Energy:", ideal_Total_KE)
+    print("--------------------------------------------------")
     #    speed_calc(rpm)
     #    drag_effect()
     #    friction_calculation()
@@ -368,9 +396,9 @@ def time_round():
     global time
     time = round(time, 1)  # Round time to 1 decimal place  
 
-rpm = idle_rpm
+rpm = 6500
 gear = 1
-coords = read_coords('Lusail_Coords.csv')
+coords = read_coords('eme_straight.csv')
 dist = total_distance(coords) * 1000
 main()
 
@@ -379,6 +407,8 @@ while has_ended == 0:
     has_ended_basic()
     if has_ended == 0:
         main()
+       
+
         
     else:
         print("Simulation has ended.")
