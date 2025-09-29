@@ -9,7 +9,7 @@ from math import radians, sin, cos, sqrt, atan2, degrees
 # TO BE VALIDATED AND TESTED
 drivetrain_efficiency = .65
 
-tire_coeff = 0.05 #assumed value for friciton coeffecient of tire rubber
+tire_coeff = 0.01 #assumed value for friciton coeffecient of tire rubber
 g = 9.81
 prim_red = 1
 sec_red = 1
