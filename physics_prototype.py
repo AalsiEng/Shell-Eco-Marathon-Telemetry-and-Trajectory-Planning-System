@@ -140,9 +140,14 @@ def rpm_round():
     closest_rpm = df['rpm'].iloc[(df['rpm'] - rpm).abs().argsort()[:1]]
     if not closest_rpm.empty:
         if rpm >= 2000:
-            rounded_rpm = closest_rpm.values[0]
-        else:
+            if rpm < 9500:
+                rounded_rpm = closest_rpm.values[0]
+            elif rpm >= 9500:
+                rounded_rpm = 9500
+        elif rpm < 2000:
             rounded_rpm = 2000
+        
+            
     else:
         print("No RPM values found.")
         return None
@@ -398,7 +403,7 @@ def time_round():
 
 rpm = 6500
 gear = 1
-coords = read_coords('eme_straight.csv')
+coords = read_coords('Lusail_Coords.csv')
 dist = total_distance(coords) * 1000
 main()
 
