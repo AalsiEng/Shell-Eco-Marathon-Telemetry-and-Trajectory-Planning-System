@@ -1,91 +1,96 @@
 import numpy as np  
 import pandas as pd  
-import matplotlib.pyplot as plt  
+import math  
 
-track_width = 0.00014
-# Load the CSV file  
-data = pd.read_csv('smoothed_lusail.csv')  # Replace with your file name  
-  
-# Extract columns  
-t_long = data['t-long'].values  
-t_lat = data['t-lat'].values  
-tn_long = data['tn-long'].values  
-tn_lat = data['tn-lat'].values  
-  
-# Track width (adjust as needed)  
- 
-  
-# Initialize lists for inner and outer walls  
-inner_wall_long = []  
-inner_wall_lat = []  
-outer_wall_long = []  
-outer_wall_lat = []  
-  
-# Loop through each point and calculate walls  
-for i in range(1, len(t_long)):  
-    # Compute direction vector (dx, dy)  
-    dx = t_long[i] - t_long[i - 1]  
-    dy = t_lat[i] - t_lat[i - 1]  
-    norm = np.sqrt(dx**2 + dy**2)  
-      
-    # Normalize direction vector  
-    dx /= norm  
-    dy /= norm  
-  
-    # Perpendicular vector (rotated by 90 degrees)  
-    perp_dx = -dy  
-    perp_dy = dx  
-  
-    # Inner wall points  
-    inner_long = t_long[i] - perp_dx * (track_width / 2)  
-    inner_lat = t_lat[i] - perp_dy * (track_width / 2)  
-    inner_wall_long.append(inner_long)  
-    inner_wall_lat.append(inner_lat)  
-  
-    # Outer wall points  
-    outer_long = t_long[i] + perp_dx * (track_width / 2)  
-    outer_lat = t_lat[i] + perp_dy * (track_width / 2)  
-    outer_wall_long.append(outer_long)  
-    outer_wall_lat.append(outer_lat)  
-  
-# Append the first points to close the loop  
-inner_wall_long.append(inner_wall_long[0])  
-inner_wall_lat.append(inner_wall_lat[0])  
-outer_wall_long.append(outer_wall_long[0])  
-outer_wall_lat.append(outer_wall_lat[0])  
-  
-# Generate segmentation lines  
-segmentation_lines = []  
-n_segments = 2 # Number of segments between inner and outer walls  
-for i in range(len(inner_wall_long) - 1):  # Adjusted to avoid the last point  
-    seg_long = np.linspace(inner_wall_long[i], outer_wall_long[i], n_segments)  
-    seg_lat = np.linspace(inner_wall_lat[i], outer_wall_lat[i], n_segments)  
-    segmentation_lines.append((seg_long, seg_lat))
+# === SETTINGS ===
+track_width = 0.00014  # Approx track width (deg equivalent, you can adjust)
+deg_to_m = 111_320     # Approx conversion deg -> meters (at equator)
+file_in = 'smoothed_lusail.csv'
+file_out = 'final_track_combined.csv'
 
-# Save to CSV
-track_data = pd.DataFrame({
-    'tn-long': tn_long,
-    'tn-lat': tn_lat,
-    'inner-long': inner_wall_long,
-    'inner-lat': inner_wall_lat,
-    'outer-long': outer_wall_long,
-    'outer-lat': outer_wall_lat
+# === LOAD DATA ===
+data = pd.read_csv(file_in)
+t_long = data['t-long'].values
+t_lat = data['t-lat'].values
+tn_long = data['tn-long'].values
+tn_lat = data['tn-lat'].values
+
+# === ARRAYS FOR RESULTS ===
+inner_long, inner_lat = [], []
+outer_long, outer_lat = [], []
+seg_inner_long, seg_inner_lat = [], []
+seg_outer_long, seg_outer_lat = [], []
+seg_heading_deg, seg_width_m = [], []
+
+# === LOOP THROUGH TRACK ===
+for i in range(1, len(t_long)):
+    dx = t_long[i] - t_long[i - 1]
+    dy = t_lat[i] - t_lat[i - 1]
+    norm = np.sqrt(dx**2 + dy**2)
+    if norm == 0:
+        continue
+
+    # Normalize direction
+    dx /= norm
+    dy /= norm
+
+    # Heading angle (in degrees)
+    heading = math.degrees(math.atan2(dy, dx))
+
+    # Perpendicular vector (90° rotated)
+    perp_dx = -dy
+    perp_dy = dx
+
+    # Inner wall
+    inner_long_i = t_long[i] - perp_dx * (track_width / 2)
+    inner_lat_i = t_lat[i] - perp_dy * (track_width / 2)
+    inner_long.append(inner_long_i)
+    inner_lat.append(inner_lat_i)
+
+    # Outer wall
+    outer_long_i = t_long[i] + perp_dx * (track_width / 2)
+    outer_lat_i = t_lat[i] + perp_dy * (track_width / 2)
+    outer_long.append(outer_long_i)
+    outer_lat.append(outer_lat_i)
+
+    # Segment endpoints
+    seg_inner_long.append(inner_long_i)
+    seg_inner_lat.append(inner_lat_i)
+    seg_outer_long.append(outer_long_i)
+    seg_outer_lat.append(outer_lat_i)
+
+    # Convert track width (approx degrees → meters)
+    width_m = track_width * deg_to_m
+    seg_width_m.append(width_m)
+    seg_heading_deg.append(heading)
+
+# === CLOSE THE LOOP ===
+inner_long.append(inner_long[0])
+inner_lat.append(inner_lat[0])
+outer_long.append(outer_long[0])
+outer_lat.append(outer_lat[0])
+seg_inner_long.append(seg_inner_long[0])
+seg_inner_lat.append(seg_inner_lat[0])
+seg_outer_long.append(seg_outer_long[0])
+seg_outer_lat.append(seg_outer_lat[0])
+seg_heading_deg.append(seg_heading_deg[0])
+seg_width_m.append(seg_width_m[0])
+
+# === COMBINE INTO ONE CSV ===
+combined = pd.DataFrame({
+    'center-long': t_long[:len(seg_inner_long)],
+    'center-lat': t_lat[:len(seg_inner_lat)],
+    'inner-long': inner_long,
+    'inner-lat': inner_lat,
+    'outer-long': outer_long,
+    'outer-lat': outer_lat,
+    'seg-inner-long': seg_inner_long,
+    'seg-inner-lat': seg_inner_lat,
+    'seg-outer-long': seg_outer_long,
+    'seg-outer-lat': seg_outer_lat,
+    'seg-heading-deg': seg_heading_deg,
+    'seg-width-m': seg_width_m
 })
-track_data.to_csv('final-track-lusail.csv', index=False)
-  
-# Visualization  
-plt.figure(figsize=(40, 40))  
-plt.plot(t_long, t_lat, '-', label='Smoothed Centerline', color='blue')  
-plt.plot(inner_wall_long, inner_wall_lat, '-', label='Inner Wall', color='green')  
-plt.plot(outer_wall_long, outer_wall_lat, '-', label='Outer Wall', color='red')  
-  
-# Plot segmentation lines  
-for seg_long, seg_lat in segmentation_lines:  
-    plt.plot(seg_long, seg_lat, '--', color='black', linewidth=1)  
-  
-plt.title('Generated Track with Walls and Segmentation Lines')  
-plt.xlabel('Longitude (t-long)')  
-plt.ylabel('Latitude (t-lat)')  
-plt.legend()  
-plt.grid()  
-plt.show()  
+
+combined.to_csv(file_out, index=False)
+print(f"✅ Combined track data saved to '{file_out}'")

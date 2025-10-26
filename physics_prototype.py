@@ -14,9 +14,9 @@ g = 9.81
 prim_red = 1
 sec_red = 1
 diff_red = 2.769
-gear_1 = 36.990
-gear_2 = 20.603
-gear_3 = 13.449
+gear_1 = 37.06
+gear_2 = 21.86
+gear_3 = 15.30 
 gear_4 = 9.889
 #gear_5 = 1
 gears = [float(gear_1), float(gear_2), float(gear_3), float(gear_4)]
@@ -143,7 +143,7 @@ def rpm_round():
             if rpm < 9500:
                 rounded_rpm = closest_rpm.values[0]
             elif rpm >= 9500:
-                rounded_rpm = 9500
+                breakpoint
         elif rpm < 2000:
             rounded_rpm = 2000
         
@@ -221,7 +221,7 @@ def speed_calc(rpm, gear):
     else:
         print("Invalid gear selected.")
         return
-    combined_ratio = prim_red * gear_ratio * diff_red
+    combined_ratio = gear_ratio 
     print(combined_ratio)
     # Calculate speed in m/s
     init_speed_ms = ((rpm * 2 * pi * wheel_radius ) / (60 * combined_ratio))   # Convert RPM to m/s
@@ -250,7 +250,7 @@ def torque_gear_ratio_calculation(gear):
     else:
         print("Invalid gear selected.")
         return
-    throttle_torque = torque * prim_red * sec_red * gear_ratio * diff_red * drivetrain_efficiency
+    throttle_torque = torque * prim_red * sec_red * gear_ratio  * drivetrain_efficiency
     corrected_torque = throttle_torque * (throttle / 100)  # Adjust torque based on throttle percentage
     print(f"Corrected Torque: {corrected_torque:.2f} Nm")
     print(f"Throttle Torque: {throttle_torque:.2f} Nm")
@@ -308,7 +308,7 @@ def final_speed_to_rpm(gear):
     else:
         print("Invalid gear selected.")
         return None
-    combined_ratio = prim_red * sec_red * gear_ratio * diff_red
+    combined_ratio = gear_ratio 
     rpm = (final_speed_ms * combined_ratio * 60) / (2 * pi * wheel_radius)  # Convert m/s to RPM
     print("new rpm:", rpm)
     return rpm
@@ -358,7 +358,9 @@ def main():
     Kinetic_Energy()
     rpm = final_speed_to_rpm(gear)
     gear = gear_change(gear)
+    print("RPM:", rpm)
     rpm_round()
+    rpm = rounded_rpm
     new_distance = distance_per_time()
     distance_covered = distance_covered + new_distance
     print("RPM:", rpm)    
@@ -401,7 +403,7 @@ def time_round():
     global time
     time = round(time, 1)  # Round time to 1 decimal place  
 
-rpm = 6500
+rpm = 2500
 gear = 1
 coords = read_coords('Lusail_Coords.csv')
 dist = total_distance(coords) * 1000
@@ -412,7 +414,7 @@ while has_ended == 0:
     has_ended_basic()
     if has_ended == 0:
         main()
-       
+        print(rounded_rpm) 
 
         
     else:
