@@ -1,4 +1,4 @@
-Id,latitude,longitude,altitude (m),distance (km)
+Id,latitude,longitude,altitude,distance
 0,25.48842018,51.45017025,11.7,0
 1,25.48842831,51.45016594,11.7,0.001
 2,25.48843631,51.45016133,11.7,0.002
