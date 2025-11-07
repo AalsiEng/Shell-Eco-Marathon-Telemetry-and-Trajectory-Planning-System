@@ -7,9 +7,8 @@ import csv
 from math import radians, sin, cos, sqrt, atan2, degrees
 
 # TO BE VALIDATED AND TESTED
-drivetrain_efficiency = .65
-
-tire_coeff = 0.01 #assumed value for friciton coeffecient of tire rubber
+drivetrain_efficiency = .85
+tire_coeff = 0.1 #assumed value for friciton coeffecient of tire rubber
 g = 9.81
 prim_red = 1
 sec_red = 1
@@ -20,7 +19,7 @@ gear_3 = 15.30
 gear_4 = 9.889
 #gear_5 = 1
 gears = [float(gear_1), float(gear_2), float(gear_3), float(gear_4)]
-idle_rpm = 2500
+idle_rpm = 1500
 global on_idle
 global has_started
 on_idle = True
@@ -233,6 +232,7 @@ def deceleration_calculation():
     global tire_coeff, g, init_speed_ms, speed_kmh
     global final_speed_ms, drag_accel, neg_acceleration    
     neg_acceleration = -( tire_coeff * g) - drag_accel
+    print(f"Negative Acceleration: {neg_acceleration:.2f} m/s²")
 
 def torque_gear_ratio_calculation(gear):
     global torque, corrected_torque, prim_red, sec_red, diff_red,throttle_torque, throttle, drivetrain_efficiency
@@ -255,6 +255,7 @@ def torque_gear_ratio_calculation(gear):
     print(f"Corrected Torque: {corrected_torque:.2f} Nm")
     print(f"Throttle Torque: {throttle_torque:.2f} Nm")
     print("torque:", torque)
+    
 
 
 
@@ -315,7 +316,7 @@ def final_speed_to_rpm(gear):
 
 def gear_change(gear):
     global rpm, gears
-    if rpm < 1000 and gear > 1:
+    if rpm < 2500 and gear > 1:
         rpm = (gears[gear - 2] * rpm) / gears[gear - 1]
         gear -= 1
         print(f"Gear changed down to {gear}")
@@ -333,6 +334,15 @@ def gear_change(gear):
 def braking_decel():
     global brake_decel, brake_force, brake_pedal_pos
 
+#def turn_radius_calc():
+#    global steering_angle, wheelbase, turn_radius
+#    wheelbase = 1.01  # meters
+#    steering_angle_rad = math.radians(steering_angle)
+#    if steering_angle_rad != 0:
+#        turn_radius = wheelbase / math.sin(steering_angle_rad)
+#    else:
+#        turn_radius = float('inf')  # Straight line
+
 
 
 def main():
@@ -343,7 +353,7 @@ def main():
     get_hp()
     get_torque()
     #get_throttle_from_csv()
-    throttle_calc()
+    #throttle_calc()
     #idle_check()
     #begin_check(on_idle)
     #init_speed_ms = final_speed_ms 
@@ -403,16 +413,17 @@ def time_round():
     global time
     time = round(time, 1)  # Round time to 1 decimal place  
 
-rpm = 2500
-gear = 1
+rpm = 7035
+gear = 3
 coords = read_coords('Lusail_Coords.csv')
 dist = total_distance(coords) * 1000
+throttle = 0
 main()
 
 while has_ended == 0:
     time_round()
     has_ended_basic()
-    if has_ended == 0:
+    if final_speed_ms > 3:
         main()
         print(rounded_rpm) 
 
